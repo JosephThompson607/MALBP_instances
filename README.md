@@ -13,7 +13,9 @@ In this library, we have tools for randomly deleting and permuting tasks for ass
 
 If you use the Mixed Model Assembly Line Balancing Instances or the methods provided in this repository, please cite this repository:
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10814098.svg)](https://doi.org/10.5281/zenodo.10814098)
 
+Joseph Thompson, “JosephThompson607/MALBP_instances: MALBP v.0.0-alpha”. Zenodo, Mar. 13, 2024. doi: 10.5281/zenodo.10814098.
 
 ## References
 
