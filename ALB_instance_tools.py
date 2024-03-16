@@ -84,7 +84,10 @@ class MixedModelInstance:
         #The flexibility measure is number of edges in the precedence graph divided by the total number of possible edges
         self.flexibility_measures = {}
         for model in self.data:
-            self.flexibility_measures[model] = 1 - len(self.data[model]['precedence_relations'])/(self.data[model]['num_tasks']*(self.no_tasks-1)/2)
+            print(model)
+            print(self.data[model]['precedence_relations'])
+            print('num_of tasks', self.data[model]['num_tasks'])
+            self.flexibility_measures[model] = 1 - len(self.data[model]['precedence_relations'])/(self.data[model]['num_tasks']*(self.data[model]['num_tasks']-1)/2)
 
         #calculates the average flexibility measure for the mixed model instance
         self.flexibility_measures['average']= sum(self.flexibility_measures.values())/self.no_models
@@ -116,8 +119,11 @@ class MixedModelInstance:
 
     def calculate_stats(self):
         self.all_tasks = get_task_union(self.data, *self.data.keys())
+        print('the data', self.data)
         print('all tasks', self.all_tasks)
+        print('len of all tasks', len(self.all_tasks))
         self.no_tasks = len(self.all_tasks)
+        print('no tasks', self.no_tasks)
         self.calculate_flexibility_measure()
         self.calculate_similarity_measure()
 
@@ -328,7 +334,7 @@ def eliminate_tasks(old_instance, elim_interval=(0.6, 0.8), seed=None):
             )  
             #update number of tasks
             instance.data[model]["num_tasks"] = len(
-                instance.data[model]["task_times"]
+                instance.data[model]["task_times"][worker]
             )  
             
     return instance
