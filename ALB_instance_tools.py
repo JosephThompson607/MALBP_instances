@@ -251,7 +251,11 @@ def rand_pert_precedence(p_graph_orig, seed=None):
             return list(p_graph.edges())
 
 def eliminate_tasks_different_root(instance, elim_dict, seed=None):
-    '''eliminates tasks from different models in the same mixed model instance. They may have different tasks eliminated from the same original precedence graph.'''
+    '''Creates a mixed model instance by taking one precedence graph and eliminating different tasks to make different product variants.
+                    parameters: instance: a mixed model instance
+                    elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
+                    seed: a seed for the random number generator
+    '''
     rng = np.random.default_rng(seed=seed)
     for idx, model in enumerate(instance.data):
         for variant in instance.data[model]["task_times"]:
@@ -272,7 +276,11 @@ def eliminate_tasks_different_root(instance, elim_dict, seed=None):
 def eliminate_tasks_shared_root(instance, elim_dict, seed=None):
     '''eliminates tasks from different models in the same mixed model instance. 
     We assume there is a "base model" and all other models just have extra
-    tasks added to it'''
+    tasks added to it.
+    parameters: 
+                instance: a mixed model instance
+                elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
+                seed: a seed for the random number generator'''
     rng = np.random.default_rng(seed=seed)
     #sorts the elim dict by the number of tasks to eliminate
     elim_dict = dict(sorted(elim_dict.items(), key=lambda item: item[1]))
@@ -303,7 +311,28 @@ def eliminate_tasks_shared_root(instance, elim_dict, seed=None):
         instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
     return instance
 
-                                                
+def perturb_task_times(instance, perturbation_amount, seed=None):    
+        """Randomly perturbs the task times on an instance.
+        Parameters:
+            instance: a mixed model instance
+            perturbation_amount: A dictionary of dictionaries. For each model, it has a dictionary with one key being the number of tasks to randomly perturb,
+                             and the other being  the upper and lower bounds of the percentage of the task time to perturb
+            seed: a seed for the random number generator"""
+        rng = np.random.default_rng(seed=seed)
+        print("perturbation amount", perturbation_amount)
+        for model in instance.data:
+            tasks_to_perturb = rng.choice( list(instance.data[model]["task_times"][1].keys()), size = perturbation_amount[model]['num_tasks'], replace=False)
+            for worker in instance.data[model]["task_times"]:
+                for task in tasks_to_perturb:
+                    print("original task time for task", task, "is", instance.data[model]["task_times"][worker][task])
+                    instance.data[model]["task_times"][worker][task] += int(
+                        instance.data[model]["task_times"][worker][task]
+                        * rng.uniform(low=perturbation_amount[model]['lower_bound'], high=perturbation_amount[model]['upper_bound'])
+                    )
+                    print("new task time for task", task, "is", instance.data[model]["task_times"][worker][task])
+
+
+        return instance                    
 
 
 # this function actually removes tasks from the precedence graph and task times
@@ -341,7 +370,10 @@ def eliminate_tasks(old_instance, elim_interval=(0.6, 0.8), seed=None):
 
 
 def reconstruct_precedence_constraints(precedence_relations, to_remove):
-    """Removes given tasks from precedence constraint, relinks preceding and succeeding tasks in the precedence  contraints"""
+    """Removes given tasks from precedence constraint, relinks preceding and succeeding tasks in the precedence  contraints.
+    parameters:
+        precedence_relations: list of lists of precedence relations, 
+        to_remove: list of tasks to remove"""
     p_graph = nx.DiGraph()
     p_graph.add_edges_from(precedence_relations)
     for node in to_remove:
@@ -350,6 +382,11 @@ def reconstruct_precedence_constraints(precedence_relations, to_remove):
                 for child in p_graph.successors(node):
                     p_graph.add_edge(parent, child)
             p_graph.remove_node(node)
+
+    #eliminates redundant precedence relations
+    p_graph = nx.transitive_reduction(p_graph)
+
+    
     return [list(edge) for edge in p_graph.edges()]
 
 
