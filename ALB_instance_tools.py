@@ -266,8 +266,6 @@ def eliminate_tasks_different_graphs(instance, elim_dict, seed=None):
                 instance.data[model]["precedence_relations"], to_remove
             )
             instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
-
-    print("instance data", instance.data)
     return instance
 
 def eliminate_tasks_subgraph(instance, elim_dict, seed=None):
@@ -315,17 +313,14 @@ def perturb_task_times(instance, perturbation_amount, seed=None):
                              and the other being  the upper and lower bounds of the percentage of the task time to perturb
             seed: a seed for the random number generator"""
         rng = np.random.default_rng(seed=seed)
-        print("perturbation amount", perturbation_amount)
         for model in instance.data:
             tasks_to_perturb = rng.choice( list(instance.data[model]["task_times"][1].keys()), size = perturbation_amount[model]['num_tasks'], replace=False)
             for worker in instance.data[model]["task_times"]:
                 for task in tasks_to_perturb:
-                    print("original task time for task", task, "is", instance.data[model]["task_times"][worker][task])
                     instance.data[model]["task_times"][worker][task] += int(
                         instance.data[model]["task_times"][worker][task]
                         * rng.uniform(low=perturbation_amount[model]['lower_bound'], high=perturbation_amount[model]['upper_bound'])
                     )
-                    print("new task time for task", task, "is", instance.data[model]["task_times"][worker][task])
 
 
         return instance                    
