@@ -196,10 +196,10 @@ def parse_alb(alb_file_name):
     order_strength = re.search("<order strength>\n(\d*,\d*)", alb_file)
     
     if order_strength:
-        parse_dict["order_strength"] = float(order_strength.group(1).replace(",", "."))
+        parse_dict["original_order_strength"] = float(order_strength.group(1).replace(",", "."))
     else:
         order_strength = re.search("<order strength>\n(\d*.\d*)", alb_file)
-        parse_dict["order_strength"] = float(order_strength.group(1))
+        parse_dict["original_order_strength"] = float(order_strength.group(1))
 
     # Task_times
     task_times = re.search("<task times>(.|\n)+?<", alb_file)
