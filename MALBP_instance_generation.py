@@ -4,7 +4,8 @@ from ALB_instance_tools import *
 import random
 
 def random_model_mixture(model_names, seed = None):
-    '''Creates a dictionary where the model name are the keys and the probability is the values. The probabilities sum to 1'''
+    '''Creates a dictionary where the model name are the keys and the probability is the values. The probabilities sum to 1.
+        parameters: model_names: a list of model names'''
     model_mixture = {}
     random.seed(seed)
     for model_name in model_names:
@@ -14,19 +15,31 @@ def random_model_mixture(model_names, seed = None):
         model_mixture[model_name] = model_mixture[model_name]/total
     return model_mixture
 
-def make_reduced_instances(filepath, SALBP_instance_list, model_names, cycle_time, interval_choice = (0.7,0.8), seed = None):
-    '''Deletes the same tasks from two different models in the same mixed model instance.'''
+def make_reduced_instances(filepath, 
+                           SALBP_instance_list, 
+                           model_names, 
+                           cycle_time, 
+                           interval_choice = (0.7,0.8), 
+                           seed = None,
+                           parent_set = "Otto"):
+    '''Deletes the same tasks from two different SALBP models in the same mixed model instance.
+        parameters: filepath: the path to the file where the mixed model instances will be written
+                    SALBP_instance_list: a list of SALBP_instances
+                    model_names: a list of model names
+                    cycle_time: the cycle time of the mixed model instance
+                    interval_choice: a tuple of two floats that represent the interval of the number of tasks to delete. (0.3, 0.4) means delete 30%-40% of the tasks
+                    seed: a seed for the random number generator
+                    parent_set: a string that will be added to the name of the mixed model instances, to differentiate them from other instance sets'''
     for i in range(len(SALBP_instance_list)-len(model_names)+1):
         instances = SALBP_instance_list[i:i+len(model_names)]
+        instance_name = '_'.join([instance.split("/")[-1].split(".")[0].split("=")[-1] for instance in instances])
         model_mixture = random_model_mixture(model_names, seed)
         model_dicts = make_instance_pair(instances, model_mixture)
-        print("These are the model_dicts")
-        print(model_dicts)
         mm_instance = MixedModelInstance(model_dicts=model_dicts, cycle_time=cycle_time)
-        print("This is the data")
         new_instance = eliminate_tasks(mm_instance, interval_choice, seed=seed)
-        new_instance.generate_name()
         new_instance.calculate_stats()
+        name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
+        new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
         new_instance.model_data_to_yaml(filepath)
 
 def make_reduced_from_one_instance(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, shared_root=True, seed = None, parent_set = "Otto"):
