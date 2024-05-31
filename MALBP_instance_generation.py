@@ -29,7 +29,7 @@ def make_reduced_instances(filepath, SALBP_instance_list, model_names, cycle_tim
         new_instance.calculate_stats()
         new_instance.model_data_to_yaml(filepath)
 
-def make_reduced_from_one_instance(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, shared_root=True, seed = None):
+def make_reduced_from_one_instance(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, shared_root=True, seed = None, parent_set = "Otto"):
     '''Deletes tasks randomly from the same SALBP_instance to create two or more distinct models.
         parameters: filepath: the path to the file where the mixed model instances will be written
                     SALBP_instance_list: a list of SALBP_instances
@@ -49,11 +49,13 @@ def make_reduced_from_one_instance(filepath, SALBP_instance_list, model_names, c
             new_instance = eliminate_tasks_shared_root(mm_instance, to_reduce, seed=seed)
         else:
             new_instance = eliminate_tasks_different_root(mm_instance, to_reduce, seed=seed)
-        new_instance.generate_name()
+        instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
+        name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
+        new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
         new_instance.calculate_stats()
         new_instance.model_data_to_yaml(filepath)
 
-def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, perturbation_amount, shared_root=True, seed = None):
+def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, perturbation_amount, shared_root=True, seed = None, parent_set = "Otto"):
     '''Deletes tasks randomly from the same SALBP_instance to create two or more distinct models. It then perturbs the task times of the tasks that are not deleted.
         parameters: filepath: the path to the file where the mixed model instances will be written
                     SALBP_instance_list: a list of SALBP_instances
@@ -75,8 +77,11 @@ def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instan
             new_instance = eliminate_tasks_shared_root(mm_instance, to_reduce, seed=seed)
         else:
             new_instance = eliminate_tasks_different_root(mm_instance, to_reduce, seed=seed)
-        new_instance.generate_name()
+        #gets the text from instance that is before the period and after the last slash
+        instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
         new_instance = perturb_task_times(new_instance, perturbation_amount, seed)
+        name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
+        new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
         new_instance.calculate_stats()
         new_instance.model_data_to_yaml(filepath)
 

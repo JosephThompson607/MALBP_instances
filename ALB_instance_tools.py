@@ -48,6 +48,7 @@ class MixedModelInstance:
         name = ''
         for model in self.model_dicts:
             name += model['fp'].split('/')[-1].split('.')[0].split('_')[-2]+ '_'+ model['fp'].split('/')[-1].split('.')[0].split('_')[-1] + '_'
+
         #remove last character of name string
         name = name[:-1]
         return name
@@ -119,11 +120,7 @@ class MixedModelInstance:
 
     def calculate_stats(self):
         self.all_tasks = get_task_union(self.data, *self.data.keys())
-        print('the data', self.data)
-        print('all tasks', self.all_tasks)
-        print('len of all tasks', len(self.all_tasks))
         self.no_tasks = len(self.all_tasks)
-        print('no tasks', self.no_tasks)
         self.calculate_flexibility_measure()
         self.calculate_similarity_measure()
 
