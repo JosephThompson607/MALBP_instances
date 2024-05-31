@@ -247,7 +247,7 @@ def rand_pert_precedence(p_graph_orig, seed=None):
         if not simple_cycles:
             return list(p_graph.edges())
 
-def eliminate_tasks_different_root(instance, elim_dict, seed=None):
+def eliminate_tasks_different_graphs(instance, elim_dict, seed=None):
     '''Creates a mixed model instance by taking one precedence graph and eliminating different tasks to make different product variants.
                     parameters: instance: a mixed model instance
                     elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
@@ -270,7 +270,7 @@ def eliminate_tasks_different_root(instance, elim_dict, seed=None):
     print("instance data", instance.data)
     return instance
 
-def eliminate_tasks_shared_root(instance, elim_dict, seed=None):
+def eliminate_tasks_subgraph(instance, elim_dict, seed=None):
     '''eliminates tasks from different models in the same mixed model instance. 
     We assume there is a "base model" and all other models just have extra
     tasks added to it.
@@ -281,23 +281,22 @@ def eliminate_tasks_shared_root(instance, elim_dict, seed=None):
     rng = np.random.default_rng(seed=seed)
     #sorts the elim dict by the number of tasks to eliminate
     elim_dict = dict(sorted(elim_dict.items(), key=lambda item: item[1]))
-    print("elim dict", elim_dict)
     #gets the first model from instance.data
     model = list(instance.data.keys())[0]
     remaining_tasks  = list(instance.data[model]["task_times"][1].keys())
-    print("remaining tasks", remaining_tasks)
     tasks_to_remove = []
     for idx, model in enumerate(instance.data):
+        #An error gets thrown if the number of tasks to remove is less than zero, so we skip that model
+        if elim_dict[model] <= 0:
+            continue
         to_remove = rng.choice(
             remaining_tasks,
             size=(int(elim_dict[model])),
             replace=False,
         )
         tasks_to_remove += list(to_remove)
-        print("tasks to remove", tasks_to_remove)
         #subtracts from each entry of the elim dict the number of the tasks to remove
         elim_dict = {key: value - elim_dict[model] for key, value in elim_dict.items()}
-        print("elim dict", elim_dict)
         #removes the to_remove tasks from the remaining tasks
         remaining_tasks = [task for task in remaining_tasks if task not in to_remove]
         #deletes the task from the dictionary

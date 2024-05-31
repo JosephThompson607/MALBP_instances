@@ -46,9 +46,9 @@ def make_reduced_from_one_instance(filepath, SALBP_instance_list, model_names, c
         model_dicts = make_instance_pair(instances, model_mixture)
         mm_instance = MixedModelInstance(model_dicts=model_dicts, cycle_time=cycle_time)
         if shared_root:
-            new_instance = eliminate_tasks_shared_root(mm_instance, to_reduce, seed=seed)
+            new_instance = eliminate_tasks_subgraph(mm_instance, to_reduce, seed=seed)
         else:
-            new_instance = eliminate_tasks_different_root(mm_instance, to_reduce, seed=seed)
+            new_instance = eliminate_tasks_different_graphs(mm_instance, to_reduce, seed=seed)
         instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
         name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
         new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
@@ -74,9 +74,9 @@ def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instan
         model_dicts = make_instance_pair(instances, model_mixture)
         mm_instance = MixedModelInstance(model_dicts=model_dicts, cycle_time=cycle_time)
         if shared_root:
-            new_instance = eliminate_tasks_shared_root(mm_instance, to_reduce, seed=seed)
+            new_instance = eliminate_tasks_subgraph(mm_instance, to_reduce, seed=seed)
         else:
-            new_instance = eliminate_tasks_different_root(mm_instance, to_reduce, seed=seed)
+            new_instance = eliminate_tasks_different_graphs(mm_instance, to_reduce, seed=seed)
         #gets the text from instance that is before the period and after the last slash
         instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
         new_instance = perturb_task_times(new_instance, perturbation_amount, seed)
