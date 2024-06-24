@@ -19,4 +19,4 @@ Joseph Thompson, “JosephThompson607/MALBP_instances: MALBP v.0.0-alpha”. Zen
 
 ## References
 
-1. Otto, A., Scholl, A., & Klein, R. (2013). Benchmark data sets for mixed-model assembly line balancing. European Journal of Operational Research, 228(2), 402-413. [Link](https://assembly-line-balancing.de/salbp/benchmark-data-sets-2013/)
+1. Otto, A.; Otto, C.; Scholl, A. (2013): Systematic data generation and test design for solution algorithms on the example of SALBPGen for assembly line balancing. European Journal of Operational Research 228/1, 33-45.
