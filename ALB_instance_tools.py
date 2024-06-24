@@ -80,7 +80,7 @@ class MixedModelInstance:
             self.all_tasks = get_task_union(self.data, *self.data.keys())
 
     def calculate_order_strength(self):
-        '''Calculates the flexibility measure for a mixed model instance'''
+        '''Calculates the order strength for a mixed model instance'''
         #for each model in the mixed model instance, calculates the order strength
         #The order strength is number of edges in the precedence graph divided by the total number of possible edges
         self.order_strength = {}
