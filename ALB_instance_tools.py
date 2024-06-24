@@ -86,9 +86,6 @@ class MixedModelInstance:
         self.order_strength = {}
 
         for model in self.data:
-            print(model)
-            print(self.data[model]['precedence_relations'])
-            print('num_of tasks', self.data[model]['num_tasks'])
             p_graph = nx.DiGraph()
             nodes = [task for task, task_time in self.data[model]['task_times'][1].items()]
             precedence_relations = self.data[model]['precedence_relations']
@@ -200,20 +197,20 @@ def parse_alb(alb_file_name):
     parse_dict = {}
     alb_file = open(alb_file_name).read()
     # Get number of tasks
-    num_tasks = re.search("<number of tasks>\n(\d*)", alb_file)
+    num_tasks = re.search("<number of tasks>\n(\\d*)", alb_file)
     parse_dict["num_tasks"] = int(num_tasks.group(1))
 
     # Get cycle time
-    cycle_time = re.search("<cycle time>\n(\d*)", alb_file)
+    cycle_time = re.search("<cycle time>\n(\\d*)", alb_file)
     parse_dict["cycle_time"] = int(cycle_time.group(1))
 
     # Order Strength
-    order_strength = re.search("<order strength>\n(\d*,\d*)", alb_file)
+    order_strength = re.search("<order strength>\n(\\d*,\\d*)", alb_file)
     
     if order_strength:
         parse_dict["original_order_strength"] = float(order_strength.group(1).replace(",", "."))
     else:
-        order_strength = re.search("<order strength>\n(\d*.\d*)", alb_file)
+        order_strength = re.search("<order strength>\n(\\d*.\\d*)", alb_file)
         parse_dict["original_order_strength"] = float(order_strength.group(1))
 
     # Task_times
