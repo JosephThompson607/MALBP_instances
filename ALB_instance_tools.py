@@ -19,7 +19,7 @@ class MixedModelInstance:
         self.all_tasks = None
         #MixedModelInstance stats
         self.no_tasks = None
-        self.flexibility_measures = None
+        self.order_strength = None
         if init_type == 'model_dicts':
             self.data = create_instance_pair_stochastic(model_dicts)
             self.format_data()
@@ -59,7 +59,7 @@ class MixedModelInstance:
                     'model_data':self.data, 
                     'cycle_time':self.cycle_time, 
                     'no_tasks' : self.no_tasks, 
-                    'flexibility_measures':self.flexibility_measures,
+                    'order_strength':self.order_strength,
                     'similarity_measure':self.similarity_measure}
         if not name:
             name = self.name
@@ -79,19 +79,32 @@ class MixedModelInstance:
             self.name = mm_yaml['name']
             self.all_tasks = get_task_union(self.data, *self.data.keys())
 
-    def calculate_flexibility_measure(self):
+    def calculate_order_strength(self):
         '''Calculates the flexibility measure for a mixed model instance'''
-        #for each model in the mixed model instance, calculates the flexibility measure
-        #The flexibility measure is number of edges in the precedence graph divided by the total number of possible edges
-        self.flexibility_measures = {}
+        #for each model in the mixed model instance, calculates the order strength
+        #The order strength is number of edges in the precedence graph divided by the total number of possible edges
+        self.order_strength = {}
+
         for model in self.data:
             print(model)
             print(self.data[model]['precedence_relations'])
             print('num_of tasks', self.data[model]['num_tasks'])
-            self.flexibility_measures[model] = 1 - len(self.data[model]['precedence_relations'])/(self.data[model]['num_tasks']*(self.data[model]['num_tasks']-1)/2)
+            p_graph = nx.DiGraph()
+            nodes = [task for task, task_time in self.data[model]['task_times'][1].items()]
+            precedence_relations = self.data[model]['precedence_relations']
+            p_graph.add_nodes_from(nodes)
+            p_graph.add_edges_from(precedence_relations)
+            #transforms to transitive closure
+            p_graph = nx.transitive_closure(p_graph)
+            #gets the number of edges in the transitive closure
+            n_edges = len(p_graph.edges())
+            #calculates the order strength for the model
+            self.order_strength[model] = n_edges/(self.data[model]['num_tasks']*(self.data[model]['num_tasks']-1)/2)
+            #rounds to 2 decimal places
+            self.order_strength[model] = round(self.order_strength[model], 2)
 
-        #calculates the average flexibility measure for the mixed model instance
-        self.flexibility_measures['average']= sum(self.flexibility_measures.values())/self.no_models
+        #calculates the average order strength for the mixed model instance
+        self.order_strength['average']= sum(self.order_strength.values())/self.no_models
 
     def calculate_similarity_measure(self):
         '''Calculates the similarity between models in a mixed model instance'''
@@ -121,7 +134,7 @@ class MixedModelInstance:
     def calculate_stats(self):
         self.all_tasks = get_task_union(self.data, *self.data.keys())
         self.no_tasks = len(self.all_tasks)
-        self.calculate_flexibility_measure()
+        self.calculate_order_strength()
         self.calculate_similarity_measure()
 
     def format_data(self):

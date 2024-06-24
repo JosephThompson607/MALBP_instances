@@ -99,8 +99,36 @@ def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instan
         new_instance.model_data_to_yaml(filepath)
 
 
-        
-def make_instances(filepath,SALBP_instance_list,model_names,cycle_time, seed = None):
+def make_reduced_multi_instance(filepath, SALBP_instance_list, model_names, cycle_time, to_reduce, perturbation_amount, shared_root=True, seed = None, parent_set = "Otto"):
+    '''Creates mixed model instances from a list of SALBP_instances. It procedes down the list of instances,
+    taking the first n instances where n is the number of models in model_names. It then eliminates tasks from the instances.
+    parameters: filepath: the path to the file where the mixed model instances will be written
+                    SALBP_instance_list: a list of SALBP_instances
+                    model_names: a list of model names
+                    cycle_time: the cycle time of the mixed model instance
+                    to_reduce: the number of tasks to delete, a dictionary with the keys being the models and the values the number of tasks to remove
+                    shared_root: a boolean indicating whether the tasks to delete should share a root, i.e. should 
+                                    it have the same base tasks with different tasks added on top, or should it eliminate different tasks from the original precedence graph for each model
+                    perturbation_amount: A dictionary of dictionaries. For each model, it has a dictionary with one key being the number of tasks to randomly perturb,
+                                         and the other being  the percentage of the perturbation (positive or negative)
+                    seed: a seed for the random number generator'''
+    for i in range(len(SALBP_instance_list)-len(model_names)+1):
+        instances = SALBP_instance_list[i:i+len(model_names)]
+        model_mixture = random_model_mixture(model_names, seed)
+        model_dicts = make_instance_pair(instances, model_mixture)
+        mm_instance = MixedModelInstance(model_dicts=model_dicts, cycle_time=cycle_time)
+        if shared_root:
+            new_instance = eliminate_tasks_subgraph(mm_instance, to_reduce, seed=seed)
+        else:
+            new_instance = eliminate_tasks_different_graphs(mm_instance, to_reduce, seed=seed)
+        new_instance = perturb_task_times(new_instance, perturbation_amount, seed)
+        instance_name = '_'.join([instance.split("/")[-1].split(".")[0].split("=")[-1] for instance in instances])
+        name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
+        new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
+        new_instance.calculate_stats()
+        new_instance.model_data_to_yaml(filepath)
+
+def make_instances(filepath,SALBP_instance_list,model_names,cycle_time, seed = None, parent_set = "Otto"):
     '''Creates mixed model instances from a list of SALBP_instances. It procedes down the list of instances, 
     taking the first n instances where n is the number of models in model_names. 
     It then creates a model mixture and creates a mixed model instance from the instances and the model mixture. 
@@ -112,6 +140,9 @@ def make_instances(filepath,SALBP_instance_list,model_names,cycle_time, seed = N
         mm_instance = MixedModelInstance(model_dicts=model_dicts, cycle_time=cycle_time)
         mm_instance.generate_name()
         mm_instance.calculate_stats()
+        instance_name = '_'.join([instance.split("/")[-1].split(".")[0].split("=")[-1] for instance in instances])
+        name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in mm_instance.data.items()])
+        mm_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
         mm_instance.model_data_to_yaml(filepath)
 
 
