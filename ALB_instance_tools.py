@@ -138,7 +138,9 @@ class MixedModelInstance:
         #Check that the total probability of entering is equal to 1
         total_probability = sum_prob(self.data)
         if total_probability != 1:
-            warnings.warn('Model probabilities do not sum to 1: ', total_probability)
+            #for some reason the f string is printing when I put it in directly
+            warning_string = f'Model probabilities do not sum to 1: {total_probability}'
+            warnings.warn(warning_string)
 
 
 
@@ -247,7 +249,7 @@ def rand_pert_precedence(p_graph_orig, seed=None):
         if not simple_cycles:
             return list(p_graph.edges())
 
-def eliminate_tasks_different_graphs(instance, elim_dict, seed=None):
+def eliminate_tasks_different_graphs(instance, elim_dict, seed=None, reindex_tasks= True):
     '''Creates a mixed model instance by taking one precedence graph and eliminating different tasks to make different product variants.
                     parameters: instance: a mixed model instance
                     elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
@@ -266,9 +268,26 @@ def eliminate_tasks_different_graphs(instance, elim_dict, seed=None):
                 instance.data[model]["precedence_relations"], to_remove
             )
             instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
+    if reindex_tasks:
+        #reindexes the tasks
+        instance.data = reindex_tasks(instance.data)
     return instance
 
-def eliminate_tasks_subgraph(instance, elim_dict, seed=None):
+def reindex_tasks(instance):
+    '''reindexes the tasks of a mixed model instance, so the tasks start at "1" and are consecutive. Shared tasks across models are given the same index'''
+    #gets the shared tasks
+    task_union = get_task_union(instance.data, *instance.data.keys())
+    #orders the task union by their integer value
+    task_union = sorted(task_union, key=lambda x: int(x))
+    #creates a dictionary with the old task index as the key and the new task index as the value
+    task_index_dict = {task: index + 1 for index, task in enumerate(task_union)}
+    for model in instance.data:
+        for worker in instance.data[model]["task_times"]:
+            instance.data[model]["task_times"][worker] = {task_index_dict[task]: value for task, value in instance.data[model]["task_times"][worker].items()}
+        instance.data[model]["precedence_relations"] = [[task_index_dict[task] for task in edge] for edge in instance.data[model]["precedence_relations"]]
+
+
+def eliminate_tasks_subgraph(instance, elim_dict, seed=None, reset_index= True):
     '''eliminates tasks from different models in the same mixed model instance. 
     We assume there is a "base model" and all other models just have extra
     tasks added to it.
@@ -303,6 +322,11 @@ def eliminate_tasks_subgraph(instance, elim_dict, seed=None):
             instance.data[model]["precedence_relations"], tasks_to_remove
         )
         instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
+    print("Before reindexing", instance.data)
+    if reset_index:
+        #reindexes the tasks
+       reindex_tasks(instance)
+    print("After reindexing", instance.data)
     return instance
 
 def perturb_task_times(instance, perturbation_amount, seed=None):    
@@ -312,6 +336,7 @@ def perturb_task_times(instance, perturbation_amount, seed=None):
             perturbation_amount: A dictionary of dictionaries. For each model, it has a dictionary with one key being the number of tasks to randomly perturb,
                              and the other being  the upper and lower bounds of the percentage of the task time to perturb
             seed: a seed for the random number generator"""
+        print("instance data", instance.data)
         rng = np.random.default_rng(seed=seed)
         for model in instance.data:
             tasks_to_perturb = rng.choice( list(instance.data[model]["task_times"][1].keys()), size = perturbation_amount[model]['num_tasks'], replace=False)
@@ -401,9 +426,15 @@ def change_task_times(instance, perc_reduct_interval=(0.40, 0.60), seed=None):
     print(new_task_times)
     return new_task_times
 
-def get_task_intersection(test_instance, model_1, model_2):
+def get_task_intersection(test_instance, *args):
     '''Returns the intersection of tasks between two models'''
-    return  set(test_instance[model_1]['task_times']).intersection(set(test_instance[model_2]['task_times']))
+    for index, model in enumerate(args):
+        if index == 0:
+            task_intersection = set(test_instance[model]['task_times'][1])
+        else:
+            task_intersection = task_intersection.intersection(set(test_instance[model]['task_times'][1]))
+    return  task_intersection
+
 
 def get_task_union(test_instance, *args):
     '''Returns the union of tasks between all models, input is a series of models to check'''

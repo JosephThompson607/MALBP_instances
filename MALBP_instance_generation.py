@@ -91,8 +91,8 @@ def make_reduced_from_one_instance_task_time_perturbation(filepath, SALBP_instan
         else:
             new_instance = eliminate_tasks_different_graphs(mm_instance, to_reduce, seed=seed)
         #gets the text from instance that is before the period and after the last slash
-        instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
         new_instance = perturb_task_times(new_instance, perturbation_amount, seed)
+        instance_name = instance.split("/")[-1].split(".")[0].split("=")[-1]
         name_tasks = '_'.join([ str(key) + str(value['num_tasks']) for (key, value) in new_instance.data.items()])
         new_instance.name = parent_set + "_" +  instance_name + "_" + "MODELtasks" + "_" +  name_tasks
         new_instance.calculate_stats()
