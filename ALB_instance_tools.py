@@ -293,8 +293,8 @@ def reindex_tasks(instance):
     task_index_dict = {task: index + 1 for index, task in enumerate(task_union)}
     for model in instance.data:
         for worker in instance.data[model]["task_times"]:
-            instance.data[model]["task_times"][worker] = {task_index_dict[task]: value for task, value in instance.data[model]["task_times"][worker].items()}
-        instance.data[model]["precedence_relations"] = [[task_index_dict[task] for task in edge] for edge in instance.data[model]["precedence_relations"]]
+            instance.data[model]["task_times"][worker] = {str(task_index_dict[task]): value for task, value in instance.data[model]["task_times"][worker].items()}
+        instance.data[model]["precedence_relations"] = [[str(task_index_dict[task]) for task in edge] for edge in instance.data[model]["precedence_relations"]]
 
 
 def eliminate_tasks_subgraph(instance, elim_dict, seed=None, reset_index= True):
