@@ -1,5 +1,4 @@
 import numpy as np
-import re
 import networkx as nx
 import random
 import matplotlib.pyplot as plt
@@ -9,6 +8,7 @@ import copy
 import yaml
 import warnings
 import csv
+from reading_functions import parse_alb
 
 class MixedModelInstance:
     def __init__(self, model_dicts=None, model_yaml=None, init_type= "model_dicts", name = None, cycle_time = None):
@@ -192,41 +192,6 @@ def read_instance_folder(folder_loc):
    instance_list.sort(key = lambda file: int(file.split("_")[-1].split(".")[0]))
    return instance_list
 
-def parse_alb(alb_file_name):
-    """Reads assembly line balancing instance .alb file, returns dictionary with the information"""
-    parse_dict = {}
-    alb_file = open(alb_file_name).read()
-    # Get number of tasks
-    num_tasks = re.search("<number of tasks>\n(\\d*)", alb_file)
-    parse_dict["num_tasks"] = int(num_tasks.group(1))
-
-    # Get cycle time
-    cycle_time = re.search("<cycle time>\n(\\d*)", alb_file)
-    parse_dict["cycle_time"] = int(cycle_time.group(1))
-
-    # Order Strength
-    order_strength = re.search("<order strength>\n(\\d*,\\d*)", alb_file)
-    
-    if order_strength:
-        parse_dict["original_order_strength"] = float(order_strength.group(1).replace(",", "."))
-    else:
-        order_strength = re.search("<order strength>\n(\\d*.\\d*)", alb_file)
-        parse_dict["original_order_strength"] = float(order_strength.group(1))
-
-    # Task_times
-    task_times = re.search("<task times>(.|\n)+?<", alb_file)
-
-    # Get lines in this regex ignoring the first and last 2
-    task_times = task_times.group(0).split("\n")[1:-2]
-    task_times = {task.split()[0]: int(task.split()[1]) for task in task_times}
-    parse_dict["task_times"] = task_times
-
-    # Precedence relations
-    precedence_relations = re.search("<precedence relations>(.|\n)+?<", alb_file)
-    precedence_relations = precedence_relations.group(0).split("\n")[1:-2]
-    precedence_relations = [task.split(",") for task in precedence_relations]
-    parse_dict["precedence_relations"] = precedence_relations
-    return parse_dict
 
 
 #function that returns names of all files in a directory with a given extension
@@ -259,13 +224,17 @@ def rand_pert_precedence(p_graph_orig, seed=None):
         if not simple_cycles:
             return list(p_graph.edges())
 
-def eliminate_tasks_different_graphs(instance, elim_dict, seed=None, reindex_tasks= True):
+def eliminate_tasks_different_graphs(instance, elim_dict, seed=None, reset_index= True):
     '''Creates a mixed model instance by taking one precedence graph and eliminating different tasks to make different product variants.
                     parameters: instance: a mixed model instance
                     elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
                     seed: a seed for the random number generator
     '''
-    rng = np.random.default_rng(seed=seed)
+    #if seed is a rng object, then we use it, otherwise we create a new rng object
+    if isinstance(seed, np.random._generator.Generator):
+        rng = seed
+    else:
+        rng = np.random.default_rng(seed=seed)
     for idx, model in enumerate(instance.data):
         for variant in instance.data[model]["task_times"]:
             to_remove = rng.choice(
@@ -278,9 +247,9 @@ def eliminate_tasks_different_graphs(instance, elim_dict, seed=None, reindex_tas
                 instance.data[model]["precedence_relations"], to_remove
             )
             instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
-    if reindex_tasks:
+    if reset_index:
         #reindexes the tasks
-        instance.data = reindex_tasks(instance.data)
+        reindex_tasks(instance)
     return instance
 
 def reindex_tasks(instance):
@@ -305,7 +274,10 @@ def eliminate_tasks_subgraph(instance, elim_dict, seed=None, reset_index= True):
                 instance: a mixed model instance
                 elim_dict: a dictionary with keys being the models and the values the number of tasks to remove
                 seed: a seed for the random number generator'''
-    rng = np.random.default_rng(seed=seed)
+    if isinstance(seed, np.random._generator.Generator):
+        rng = seed
+    else:
+        rng = np.random.default_rng(seed=seed)
     #sorts the elim dict by the number of tasks to eliminate
     elim_dict = dict(sorted(elim_dict.items(), key=lambda item: item[1]))
     #gets the first model from instance.data
@@ -332,11 +304,9 @@ def eliminate_tasks_subgraph(instance, elim_dict, seed=None, reset_index= True):
             instance.data[model]["precedence_relations"], tasks_to_remove
         )
         instance.data[model]["num_tasks"] = len(instance.data[model]["task_times"][1])
-    print("Before reindexing", instance.data)
     if reset_index:
         #reindexes the tasks
        reindex_tasks(instance)
-    print("After reindexing", instance.data)
     return instance
 
 def perturb_task_times(instance, perturbation_amount, seed=None):    
@@ -346,8 +316,11 @@ def perturb_task_times(instance, perturbation_amount, seed=None):
             perturbation_amount: A dictionary of dictionaries. For each model, it has a dictionary with one key being the number of tasks to randomly perturb,
                              and the other being  the upper and lower bounds of the percentage of the task time to perturb
             seed: a seed for the random number generator"""
-        print("instance data", instance.data)
-        rng = np.random.default_rng(seed=seed)
+        #if seed is a rng object, then we use it, otherwise we create a new rng object
+        if isinstance(seed, np.random._generator.Generator):
+            rng = seed
+        else:
+            rng = np.random.default_rng(seed=seed)
         for model in instance.data:
             tasks_to_perturb = rng.choice( list(instance.data[model]["task_times"][1].keys()), size = perturbation_amount[model]['num_tasks'], replace=False)
             for worker in instance.data[model]["task_times"]:
@@ -356,8 +329,6 @@ def perturb_task_times(instance, perturbation_amount, seed=None):
                         instance.data[model]["task_times"][worker][task]
                         * rng.uniform(low=perturbation_amount[model]['lower_bound'], high=perturbation_amount[model]['upper_bound'])
                     )
-
-
         return instance                    
 
 
@@ -426,14 +397,12 @@ def entries_to_remove(entries, the_dict):
 def change_task_times(instance, perc_reduct_interval=(0.40, 0.60), seed=None):
     # this function creates new task times based on the original task times takes original task times and how much they need to be reduced
     new_task_times = instance["task_times"]
-    print("old task times", new_task_times)
     rng = np.random.default_rng(seed=seed)
     for key in new_task_times:
         new_task_times[key] = int(
             new_task_times[key]
             * rng.uniform(low=perc_reduct_interval[0], high=perc_reduct_interval[1])
         )
-    print(new_task_times)
     return new_task_times
 
 def get_task_intersection(test_instance, *args):
@@ -480,7 +449,7 @@ def list_all_tasks(instance):
     """Generates the set O of all tasks from a list of models"""
     tasks = []
     for index, model in enumerate(instance):
-        tasks += model["task_times"].keys()
+        tasks += model["task_times"][0].keys()
     return list(set(tasks))
 
 
